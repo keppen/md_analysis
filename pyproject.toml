@@ -1,0 +1,28 @@
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = false
+strict = true
+show_error_codes = true
+mypy_path = [
+  ".",
+  "typings",
+  ".mypy_cache/typings",
+]
+
+exclude = [
+  "**/venv",
+  "**/.venv",
+  "**/__pycache__",
+  "**/node_modules",
+  "**/build",
+  "**/dist",
+  "**/.git",
+  "**/.mypy_cache",
+]
+
+[[tool.mypy.overrides]]
+module = [
+  "MDAnalysis.*",
+  "pandas.*",
+]
+ignore_missing_imports = true

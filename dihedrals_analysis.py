@@ -8,9 +8,7 @@ import pandas as pd
 from ploting import plot_kde_3d
 
 
-def compute_torsion_dataframe(
-    ref_universe, nres, atom_selector_fn, verbose=True, stop=-1
-):
+def compute_torsion_dataframe(universe, nres, atom_selector_fn, verbose=True, stop=-1):
     """
     Build a list of AtomGroups of four atoms per residue via atom_selector_fn,
     run the Dihedral analysis, and return a DataFrame of angles.
@@ -34,7 +32,8 @@ def compute_torsion_dataframe(
     """
     dihedral_groups = []
     for i in range(nres):
-        sel = atom_selector_fn(ref_universe, i, nres)
+        sel = atom_selector_fn(universe, i, nres)
+        print(f"INFO: Current selection {atom_selector_fn}")
         if not all(len(group) == 1 for group in sel):
             counts = [len(g) for g in sel]
             raise ValueError(f"Could not find all 4 atoms for angle {i}: {counts}")
@@ -43,7 +42,8 @@ def compute_torsion_dataframe(
 
     dih = Dihedral(dihedral_groups)
     dih.run(verbose=verbose, stop=stop)
-    return pd.DataFrame(dih.angles.ravel(), columns=["angle"])
+    print(dih.results.angles)
+    return dih.results.angles
 
 
 def generate_grid(grid_limits, resolution):
@@ -92,20 +92,23 @@ if __name__ == "__main__":
 
     png_file = traj_file.stem + ".3dkde.png"
     npz_file = traj_file.stem + ".3dkde.npz"
+    npy_file = traj_file.stem + ".3dkde.data.npy"
 
     # Load reference (correct names) and trajectory (coordinates)
-    ref = mda.Universe(ref_file)
-    traj = mda.Universe(traj_file)
+    # ref = mda.Universe(ref_file)
+    traj = mda.Universe(ref_file, traj_file)
+    print(traj.trajectory)
 
     # Validate matching atom counts
-    if len(ref.atoms) != len(traj.atoms):
-        raise ValueError("Atom counts don't match")
+    # if len(ref.atoms) != len(traj.atoms):
+    #     raise ValueError("Atom counts don't match")
 
     # Patch the trajectory into the reference Universe
-    ref.trajectory = traj.trajectory
+    # ref.trajectory = traj.trajectory
 
     # Number of residues
-    nres = max(r.resid for r in ref.residues) + 1
+    nres = max(r.resid for r in traj.residues) + 1
+    print("nres = ", nres)
 
     # Define selector functions for each torsion type
     def selector_torsion1(uni, i, nres):
@@ -151,14 +154,22 @@ if __name__ == "__main__":
     stop = -1
 
     # Compute the three torsion DataFrames
-    torsion1 = compute_torsion_dataframe(ref, nres, selector_torsion1, stop=stop)
-    torsion2 = compute_torsion_dataframe(ref, nres, selector_torsion2, stop=stop)
-    torsion3 = compute_torsion_dataframe(ref, nres, selector_torsion3, stop=stop)
+    torsion1 = compute_torsion_dataframe(traj, nres, selector_torsion1, stop=stop)
+    torsion2 = compute_torsion_dataframe(traj, nres, selector_torsion2, stop=stop)
+    torsion3 = compute_torsion_dataframe(traj, nres, selector_torsion3, stop=stop)
 
-    # Concatenate and inspect
-    data = pd.concat([torsion1, torsion2, torsion3], axis=1).values
+    data = np.concatenate([torsion1, torsion2, torsion3], axis=1)
     print(data)
     print(data.shape)
+    np.save(npy_file, data)
+    # Concatenate and inspect
+    data = np.concatenate(
+        [[torsion1.ravel(), torsion2.ravel(), torsion3.ravel()]], axis=1
+    ).T
+    print(data)
+    print(data.shape)
+    print("WARNING!  KDE calculataion is done! Remove breaking point")
+    exit()
 
     grid_limits = [(-180, 180), (-180, 180), (-180, 180)]
     resolution = 90
