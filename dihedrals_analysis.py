@@ -4,7 +4,6 @@ from MDAnalysis.analysis.dihedrals import Dihedral
 import MDAnalysis as mda
 from sklearn.neighbors import KernelDensity
 import numpy as np
-import pandas as pd
 from ploting import plot_kde_3d
 
 
@@ -169,7 +168,6 @@ if __name__ == "__main__":
     print(data)
     print(data.shape)
     print("WARNING!  KDE calculataion is done! Remove breaking point")
-    exit()
 
     grid_limits = [(-180, 180), (-180, 180), (-180, 180)]
     resolution = 90

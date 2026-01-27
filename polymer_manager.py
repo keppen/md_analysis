@@ -47,8 +47,14 @@ class PolymerManager:
         return str(self.structure)
 
     def print_backbone(self):
-        print("VMD", " ".join([str(a.idx) for a in self.backbone]))
-        print("GMX", " ".join([str(a.idx + 1) for a in self.backbone]))
+        print(
+            "Backbone indexes: VMD visualization, no HN and O atom types",
+            " ".join([str(a.idx) for a in self.backbone]),
+        )
+        print(
+            "Backbone indexes: GMX clustering, no HN and O atom types",
+            " ".join([str(a.idx + 1) for a in self.backbone]),
+        )
         backbone = copy(self.backbone)
         for a in self.backbone:
             bond_elements = [b.element_name for b in a.bond_partners]
@@ -71,8 +77,14 @@ class PolymerManager:
             ):
                 backbone.extend([b for b in a.bond_partners if b.element_name == "C"])
 
-        print("VMD", " ".join([str(a.idx) for a in set(backbone)]))
-        print("GMX", " ".join([str(a.idx + 1) for a in set(backbone)]))
+        print(
+            "Backbone indexes: VMD visualization, with HN and O atom types",
+            " ".join([str(a.idx) for a in set(backbone)]),
+        )
+        print(
+            "Backbone indexes: GMX clustering, no HN and O atom types",
+            " ".join([str(a.idx + 1) for a in set(backbone)]),
+        )
         return " ".join([str(a.idx + 1) for a in set(backbone)])
 
     def get_structure_params(self):
@@ -184,7 +196,7 @@ class PolymerManager:
             else:
                 ends = list(residue_atom_names & carbonyl_carbon_names)
 
-            print(start_name, ends)
+            # print(start_name, ends)
 
             # Find and extend path
             for end_name in ends:
@@ -199,7 +211,7 @@ class PolymerManager:
                 raise ValueError("Path not found")
 
             backbone_atoms.extend(path)
-            print("VMD", " ".join([str(a.idx) for a in backbone_atoms]))
+            # print("VMD", " ".join([str(a.idx) for a in backbone_atoms]))
 
         return backbone_atoms
 
@@ -376,7 +388,7 @@ class PolymerManager:
     def detect_residue(self, residue: ResidueTemplate) -> Structure:
         """Identify residue type and return standardized structure."""
         for res_name, template in self.residue_templates.items():
-            print(res_name)
+            # print(res_name)
             if self._is_same_residue(residue, template):
                 structure = template.to_structure()
                 structure.residues[0].name = res_name
@@ -397,7 +409,7 @@ class PolymerManager:
         struct1 = res1.to_structure()
         struct2 = res2.to_structure()
 
-        print(struct1, struct2)
+        # print(struct1, struct2)
 
         # Compare adjacency matrices
         return self._compare_residue_graphs(struct1, struct2)
@@ -408,8 +420,8 @@ class PolymerManager:
         adj_matrix1 = self._build_adjacency_matrix(struct1.atoms)
         adj_matrix2 = self._build_adjacency_matrix(struct2.atoms)
 
-        print(adj_matrix1)
-        print(adj_matrix2)
+        # print(adj_matrix1)
+        # print(adj_matrix2)
 
         return np.array_equal(adj_matrix1, adj_matrix2)
 
