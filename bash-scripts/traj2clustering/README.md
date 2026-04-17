@@ -1,4 +1,4 @@
-## ./merge_gmx.sh ##
+# ./merge_gmx.sh #
 
 # Overview #
 
@@ -9,7 +9,7 @@ This script processes molecular dynamics trajectories generated with GROMACS. It
  - Generates per-frame isolated-molecule trajectories
  - Organizes outputs into a structured analysis directory
 
-== Usage ==
+# Usage #
 
 ```bash
 ./merge_gmx.sh <simulation_name>
@@ -38,7 +38,7 @@ The structure of `sim` directory:
 
 **Note**
 
-`simulation_name` have hadcoded format `boc-[a-z]*[0-9]*`. E. g. `<simulation_name>`: boc-ls4-acn-classic -> `<system_name>`: boc-ls4
+`simulation_name` have hadcoded format `boc-[a-z]*[0-9]*`. E. g. `<simulation_name>: boc-ls4-acn-classic` -> `<system_name>: boc-ls4`
 
 == Output structure ==
 
