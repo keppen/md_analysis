@@ -1,6 +1,6 @@
 ## ./merge_gmx.sh ##
 
-== Overview ==
+# Overview #
 
 This script processes molecular dynamics trajectories generated with GROMACS. It:
 
