@@ -30,6 +30,33 @@ name_map = {
     "boc-pss4": "Boc-Pc4 (SS-SS-SS-SS)",
     "boc-pssrr4": "Boc-Pc4 (SS-RR-SS-RR)",
 }
+name_map_chcl3 = {
+    "boc-a4": "Boc-A4",
+    "boc-ds4": "Boc-D4 (SSSS)",
+    "boc-dsr4": "Boc-D4 (SRSR) ",
+    "boc-cs4": "Boc-C4 (SSSS)",
+    "boc-csr4": "Boc-C4 (SRSR)",
+    "boc-css4": "Boc-Cc4 (SS-SS-SS-SS)",
+    "boc-cssrr4": "Boc-Cc4 (SS-RR-SS-RR)",
+    "boc-vs4": "Boc-V4 (SSSS)",
+    "boc-vsr4": "Boc-V4 (SRSR)",
+    "boc-ls4": "Boc-L4 (SSSS)",
+    "boc-lsr4": "Boc-L4 (SRSR)",
+    "boc-pas4": "Boc-Pa4 (SSSS)",
+    "boc-pasr4": "Boc-Pa4 (SRSR)",
+    "boc-pgs4": "Boc-Pg4 (SSSS), CHCl3",
+    "boc-pgsssr": "Boc-Pg4 (SSSR), CHCl3",
+    "boc-pgsrss": "Boc-Pg4 (SRSS), CHCl3",
+    "boc-pgsr4": "Boc-Pg4 (SRSR), CHCl3",
+    "boc-pss4": "Boc-Pc4 (SS-SS-SS-SS)",
+    "boc-pssrr4": "Boc-Pc4 (SS-RR-SS-RR)",
+}
+name_map_acn = {
+    "boc-pgs4": "Boc-Pg4 (SSSS), ACN",
+    "boc-pgsssr": "Boc-Pg4 (SSSR), ACN",
+    "boc-pgsrss": "Boc-Pg4 (SRSS), ACN",
+    "boc-pgsr4": "Boc-Pg4 (SRSR), ACN",
+}
 
 
 def sort_list(lst, str_reverse=False):
@@ -110,7 +137,7 @@ def plot_heatmap(
     if ylabels is not None:
         ax.set_yticklabels(ylabels, rotation=45, ha="right")
     if xlabels is not None:
-        ax.set_xticklabels(xlabels)
+        ax.set_xticklabels(xlabels, rotation=45, ha="right")
 
     # Optional annotations
     if annotate:
@@ -128,25 +155,32 @@ def plot_heatmap(
 
 if __name__ == "__main__":
     base_dir = Path(".")
-    glob_avg = f"boc-*/hbonds_avg.npy"
+    currrent_cwd = os.getcwd()
+
     glob_indexes = f"hbonds_indexes.npy"
 
-    files = sorted(base_dir.glob(glob_avg))
+    glob_avg_chcl3 = f"analysis/boc-*/hbonds_avg.npy"
 
-    # order = ["pgs4", "pgsssr", "pgsrss", "pgsr4"]
-    # files_sorted = sorted(
-    #     files,
-    #     key=lambda f: order.index(
-    #         f.parts[0].split("-")[1]
-    #     ),  # wyciągamy np. 'pgs4' z 'boc-pgs4'
-    # )
+    files_chcl3 = sorted(base_dir.glob(glob_avg_chcl3))
 
-    files_sorted = files
+    glob_avg_acn = f"analysis-acn/boc-*/hbonds_avg.npy"
+
+    files_acn = sorted(base_dir.glob(glob_avg_acn))
+
+    files_chcl3_sorted = files_chcl3
+    files_acn_sorted = files_acn
+
+    files_sorted = []
+    files_sorted.extend(files_chcl3_sorted)
+    files_sorted.extend(files_acn_sorted)
 
     system_names = []
     matrixes = []
-    for path in files_sorted:
-        system_names.append(name_map[os.path.basename(os.path.dirname(path))])
+    for path in files_chcl3_sorted:
+        system_names.append(name_map_chcl3[os.path.basename(os.path.dirname(path))])
+
+    for path in files_acn_sorted:
+        system_names.append(name_map_acn[os.path.basename(os.path.dirname(path))])
 
     for file in files_sorted:
         match = re.search(r"(boc-.+)/", file.as_posix())
@@ -159,9 +193,10 @@ if __name__ == "__main__":
 
         data = np.load(file)
         matrixes.append(data)
+        print(file.parent)
         print(f"{system_key}/{glob_indexes}")
         print(data)
-        indexes = np.load(f"{system_key}/{glob_indexes}", allow_pickle=True)
+        indexes = np.load(f"{file.parent}/{glob_indexes}", allow_pickle=True)
         donors = np.array(indexes[0])
         acceptors = np.array(indexes[1])
 
@@ -175,7 +210,7 @@ if __name__ == "__main__":
         print(data)
         print(sorted_donors, sorted_acceptors)
 
-        os.chdir(system_key)
+        os.chdir(file.parent)
         plot_heatmap(
             data,
             title=f"{system_name.replace(' ', '-')}-Average-Hydrogen-Bond",
@@ -185,7 +220,7 @@ if __name__ == "__main__":
             annotate=False,
             figsize=(3.8, 3.25),
         )
-        os.chdir("..")
+        os.chdir(currrent_cwd)
 
     flattened = [m.flatten() for m in matrixes]
     similarity_matrix = cosine_similarity(flattened)
@@ -225,53 +260,93 @@ if __name__ == "__main__":
     #     cmap="RdPu",
     # )
     #
-    keywords = ["A4", "D4", "V4", "L4", "Pg4", "Pa4"]
-    keyword2 = "SSSS"
-    selection = []
-    for i, k in enumerate(keywords):
-        for j, n in enumerate(system_names):
-            if k in n and keyword2 in n:
-                selection.append(n)
-            elif k == "A4" and k in n:
-                selection.append(n)
-            else:
-                continue
-    idx = np.array([system_names.index(n) for n in selection])
-    print(system_names)
+    # keywords = ["A4", "D4", "V4", "L4", "Pg4", "Pa4"]
+    # keyword2 = "SSSS"
+    # selection = []
+    # for i, k in enumerate(keywords):
+    #     for j, n in enumerate(system_names):
+    #         if k in n and keyword2 in n:
+    #             selection.append(n)
+    #         elif k == "A4" and k in n:
+    #             selection.append(n)
+    #         else:
+    #             continue
+    # idx = np.array([system_names.index(n) for n in selection])
+    # print(system_names)
+    # print(keywords, idx)
+    # print(similarity_matrix[np.ix_(idx, idx)].shape)
+    # plot_heatmap(
+    #     similarity_matrix[np.ix_(idx, idx)],
+    #     title="Cosine similarity between HBond matrices",
+    #     # xlabels=selection,
+    #     # ylabels=selection,
+    #     cmap="Reds",
+    #     figsize=(3.8, 3.25),
+    # )
+    #
+
+    order = ["(SSSS),", "(SSSR),", "(SRSS),", "(SRSR),"]
+
+    def selection_sort(selection, order):
+        selection_sorted = sorted(
+            selection,
+            key=lambda s: order.index(
+                s.split()[1]
+            ),  # wyciągamy np. 'pgs4' z 'boc-pgs4'
+        )
+        return selection_sorted
+
+    keywords = ["Pg4"]
+    selection = [n for n in system_names if any(k in n for k in keywords)]
+    keywords = ["CHCl3"]
+    selection = [n for n in selection if any(k in n for k in keywords)]
+    selection = selection_sort(selection, order)
+    idx = np.array([i for i, n in enumerate(system_names) if n in selection])
     print(keywords, idx)
     print(similarity_matrix[np.ix_(idx, idx)].shape)
     plot_heatmap(
         similarity_matrix[np.ix_(idx, idx)],
-        title="Cosine similarity between HBond matrices",
-        # xlabels=selection,
-        # ylabels=selection,
-        cmap="Reds",
-        figsize=(3.8, 3.25),
+        title="PG4-CHCL3-Similarity",
+        xlabels=selection,
+        ylabels=selection,
+        cmap="RdPu",
+        normalized=True,
     )
-    #
-    # keywords = ["Pg4", "Pa4", "A4"]
-    # selection = [n for n in system_names if any(k in n for k in keywords)]
-    # idx = np.array([i for i, n in enumerate(system_names) if n in selection])
-    # print(keywords, idx)
-    # print(similarity_matrix[np.ix_(idx, idx)].shape)
-    # plot_heatmap(
-    #     similarity_matrix[np.ix_(idx, idx)],
-    #     title="Sel-Aromatic-Similarity",
-    #     xlabels=selection,
-    #     ylabels=selection,
-    #     cmap="RdPu",
-    # )
 
-    # keywords = ["Pg4"]
-    # selection = [n for n in system_names if any(k in n for k in keywords)]
-    # idx = np.array([i for i, n in enumerate(system_names) if n in selection])
-    # print(keywords, idx)
-    # print(similarity_matrix[np.ix_(idx, idx)].shape)
-    # plot_heatmap(
-    #     similarity_matrix[np.ix_(idx, idx)],
-    #     title="Sel-Pg-Similarity",
-    #     xlabels=selection,
-    #     ylabels=selection,
-    #     cmap="RdPu",
-    #     normalized=True,
-    # )
+    keywords = ["Pg4"]
+    selection = [n for n in system_names if any(k in n for k in keywords)]
+    keywords = ["ACN"]
+    selection = [n for n in selection if any(k in n for k in keywords)]
+    selection = selection_sort(selection, order)
+    idx = np.array([i for i, n in enumerate(system_names) if n in selection])
+    print(keywords, idx)
+    print(similarity_matrix[np.ix_(idx, idx)].shape)
+    plot_heatmap(
+        similarity_matrix[np.ix_(idx, idx)],
+        title="PG-ACN-Similarity",
+        xlabels=selection,
+        ylabels=selection,
+        cmap="RdPu",
+        normalized=True,
+    )
+    keywords = ["Pg4"]
+    selection = [n for n in system_names if any(k in n for k in keywords)]
+    keywords1 = ["ACN"]
+    selection1 = [n for n in selection if any(k in n for k in keywords1)]
+    selection1 = selection_sort(selection1, order)
+    keywords2 = ["CHCl3"]
+    selection2 = [n for n in selection if any(k in n for k in keywords2)]
+    selection2 = selection_sort(selection2, order)
+    idx1 = np.array([i for i, n in enumerate(system_names) if n in selection1])
+    idx2 = np.array([i for i, n in enumerate(system_names) if n in selection2])
+    print(keywords, idx1)
+    print(keywords, idx2)
+    print(similarity_matrix[np.ix_(idx1, idx2)].shape)
+    plot_heatmap(
+        similarity_matrix[np.ix_(idx1, idx2)],
+        title="PG-ACNvsCHCL3-Similarity",
+        xlabels=selection2,
+        ylabels=selection1,
+        cmap="RdPu",
+        normalized=True,
+    )

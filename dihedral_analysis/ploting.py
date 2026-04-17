@@ -108,12 +108,21 @@ if __name__ == "__main__":
     file = sys.argv[1]
 
     data = np.load(file)
-    PDF = data["PDF"]
-    coordinates = data["coordinates"]
-    resolution = data["resolution"]
-    grid = data["grid_limits"]
-    labels = data["labels"]
-    png_file = str(data["png_file"])
+    # PDF = data["PDF"]
+    # coordinates = data["coordinates"]
+    # resolution = data["resolution"]
+    # grid = data["grid_limits"]
+    # labels = data["labels"]
+    # png_file = str(data["png_file"])
+    PDF = data["data"]
+    coordinates = data["coords"]
+    grid = [
+        [-180, 180],
+        [-180, 180],
+        [-180, 180],
+    ]
+    png_file = "test.png"
+    labels = {r"$\phi$", r"$\xi$", r"$\chi$"}
 
     plot_kde_3d(
         PDF,

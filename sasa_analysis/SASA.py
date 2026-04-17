@@ -203,5 +203,9 @@ if __name__ == "__main__":
 
     # sasa_traj = universe_setup(files, NAMED_PDB, selection="name N C O OA HN")
     # DataFrame(sasa_traj).to_csv("sasa_urethane.csv")
-    sasa_traj = universe_setup(files, NAMED_PDB)
-    DataFrame(sasa_traj).to_csv("sasa_total.csv")
+    # sasa_traj = universe_setup(files, NAMED_PDB)
+    # DataFrame(sasa_traj).to_csv("sasa_total.csv")
+    sasa_traj = universe_setup(
+        files, NAMED_PDB, selection="name CZ* CF* CI* CK HZ* HF* HI* HK* "
+    )
+    DataFrame(sasa_traj).to_csv("sasa_aromatic.csv")
