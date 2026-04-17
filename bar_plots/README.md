@@ -7,14 +7,17 @@ aggregates minor clusters into an “Others” category and orders systems by
 stereochemistry.
 
 # Usage #
-`python script.py <system1> <system2> ...`
+`python ./plot_size.py <system1> <system2> ...`
 
 Each `<system>` must follow this structure:
 
+
+`./<system>/RMSD/<system>-size.xvg`
+
+Examples
 ```bash
-./<system>/RMSD/<system>-size.xvg
-Example
-python script.py boc-a4 boc-pgs4 boc-pgsr4
+python ./plot_size.py boc-a4 boc-pgs4 boc-pgsr4 
+python ./plot_size.py boc-pg*   # Wildcards work. boc-pg* analysis direcotries have to exist
 ```
 
 # Output #
