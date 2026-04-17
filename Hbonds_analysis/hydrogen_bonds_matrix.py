@@ -11,7 +11,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 INPUT_DIR = Path(sys.argv[1])
 NAMED_PDB = Path(sys.argv[2])
 TOPOLOGY_ITP = Path(sys.argv[3])
-GLOB = "0-classic-0.xtc"
+GLOB = "0-classic-*.xtc"
 D_A_CUTOFF = 3.5
 D_H_A_ANGLE = 155
 N_WORKERS = 1
