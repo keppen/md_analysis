@@ -138,7 +138,7 @@ if __name__ == "__main__":
 
     def selector_torsion3(uni, i, nres):
         """CHI angle"""
-        # last residue has HO in$stead of next N
+        # last residue has HO instead of next N
         if i == nres - 1:
             next_atom = uni.select_atoms(f"resid {i} and name HO")
         else:

@@ -6,8 +6,10 @@ import sys
 
 # ---- SETTINGS ----
 DATA_DIR = Path(sys.argv[1])
-MODE = sys.argv[2]
-OUTPUT = MODE + "_rdf_plot.png"
+SUFFIX = sys.argv[2]
+POLY_ATOM = sys.argv[3]
+SOLV_ATOM = sys.argv[4]
+OUTPUT = SUFFIX + "_rdf_plot.png"
 MAX_CURVES = 20  # avoid clutter
 # ------------------
 
@@ -27,14 +29,14 @@ blue_colors = [
 red_colors = [
     "#7F0000",
     "#B30000",
-    "#CB181D",
-    "#E31A1C",
-    "#EF3B2C",
     "#FB6A4A",
     "#FC9272",
     "#FCBBA1",
     "#A50F15",
     "#67000D",
+    "#CB181D",
+    "#E31A1C",
+    "#EF3B2C",
 ]
 
 grey_colors = [
@@ -63,6 +65,14 @@ purple_colors = [
     "#7B3294",
 ]
 
+new_colors = [
+    "#08306B",
+    "#7F0000",
+    "#333333",
+    "#8B8000",
+    "#3F007D",
+]
+
 
 def extract_label(filename):
     """
@@ -74,11 +84,11 @@ def extract_label(filename):
     parts = name.split("_")
 
     try:
-        solv_atom = parts[2]
-        resname = parts[3]
-        resid = parts[4]
-        atom = parts[5]
-        return f"UNK-{atom}:SOLV-{solv_atom}"
+        solv_atom = parts[-4]
+        resname = parts[-3]
+        resid = parts[-2]
+        atom = parts[-1]
+        return f"{resname}-{resid} {atom}:SOLV-{solv_atom}"
     except:
         return name
 
@@ -91,8 +101,29 @@ def main():
         sys.exit(1)
 
     bins = np.load(bins_file)
+    rdf_files = []
+    # rdf_files.extend(sorted(DATA_DIR.glob(f"rdf_{SUFFIX}*SOLVENT_C_*OT.npy")))
+    # rdf_files.extend(sorted(DATA_DIR.glob(f"rdf_{SUFFIX}*SOLVENT_C_*O.npy")))
 
-    rdf_files = sorted(DATA_DIR.glob(f"rdf_{MODE}*.npy"))
+    print(f"rdf_{SUFFIX}*SOLVENT_{SOLV_ATOM}_*_{POLY_ATOM}*.npy")
+
+    rdf_files.extend(
+        sorted(DATA_DIR.glob(f"rdf_{SUFFIX}*SOLVENT_{SOLV_ATOM}_*_{POLY_ATOM}*.npy"))
+    )
+    if POLY_ATOM == "OT":
+        rdf_files.extend(
+            sorted(DATA_DIR.glob(f"rdf_{SUFFIX}*SOLVENT_{SOLV_ATOM}_*_O.npy"))
+        )
+        rdf_files.extend(
+            sorted(DATA_DIR.glob(f"rdf_{SUFFIX}*SOLVENT_{SOLV_ATOM}_*_3_OA.npy"))
+        )
+    if POLY_ATOM == "HN":
+        rdf_files.extend(
+            sorted(DATA_DIR.glob(f"rdf_{SUFFIX}*SOLVENT_{SOLV_ATOM}_*_HO.npy"))
+        )
+
+    # rdf_files.extend(sorted(DATA_DIR.glob(f"rdf_{SUFFIX}*SOLVENT_H_*OT.npy")))
+    # rdf_files.extend(sorted(DATA_DIR.glob(f"rdf_DONOR*.npy")))
 
     if not rdf_files:
         print("[ERROR] No rdf_*.npy files found")
@@ -107,16 +138,23 @@ def main():
     for i, f in enumerate(rdf_files):
         rdf = np.load(f)
         label = extract_label(f)
+        print(label.split(":")[0].split(" ")[1])
 
-        if "O" in label.split(":")[0].split("-")[1]:
-            color = red_colors[i % 10]
+        if "O" in label.split(":")[0].split(" ")[1]:
+            if "A" in label.split(":")[0].split(" ")[1]:
+                color = blue_colors[i % 10]
+            else:
+                color = red_colors[i % 10]
         elif "N" in label.split(":")[0].split("-")[1]:
             color = blue_colors[i % 10]
         elif "H" in label.split(":")[0].split("-")[1]:
             color = grey_colors[i % 10]
+        elif "COM" in label.split(":")[-1]:
+            color = grey_colors[i % 10]
         else:
-            color = False
+            color = grey_colors[i % 10]
 
+        color = new_colors[i % 10]
         if i < MAX_CURVES:
             plt.plot(bins, rdf, alpha=0.9, label=label, color=color)
 
@@ -129,7 +167,7 @@ def main():
     # --- plot styling ---
     plt.xlabel("r (Å)")
     plt.ylabel("g(r)")
-    plt.title("RDF per urethane site")
+    plt.title("RDF")
 
     if len(rdf_files) <= MAX_CURVES:
         plt.legend(fontsize=8)
