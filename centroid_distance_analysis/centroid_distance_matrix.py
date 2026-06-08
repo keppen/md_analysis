@@ -1,6 +1,7 @@
 from time import time
 import MDAnalysis as mda
 from MDAnalysis.lib.distances import distance_array
+from MDAnalysis.topology.tables import vdwradii as vdw_radii
 import numpy as np
 import sys
 from pathlib import Path
@@ -14,29 +15,63 @@ PROBE_RADIUS_A = 1.4  # Angstrem
 
 # -----------------------
 
-PROBE_RADIUS_NM = PROBE_RADIUS_A / 10  # nm
+
+def get_vdw_radii(atoms):
+    return np.array([vdw_radii.get(atom.element, 1.7) for atom in atoms])
 
 
-def compute_sidechain_centrorids(universe: mda.Universe, nres: int):
-    centroids = []
-    resids = []
+def get_sidechains(universe, nres):
+    sidechains = []
 
-    for i in range(nres):
-        selection = f"resid {i}"
-        residue = universe.select_atoms(selection)
-        sidechain = residue.atoms.select_atoms(
-            "not name N C OA O CB* CG* CT* CBT* CGT* OAT* OT H* "
+    for i in range(len(nres)):
+        residue = universe.select_atoms(f"resid {i}")
+
+        sel = residue.atoms.select_atoms(
+            "not name N C OA O CB* CG* CT* CBT* CGT* OAT* OT H*"
         )
-        if len(sidechain) == 0:
-            continue  # skip no sidechain
-        centroids.append(sidechain.positions.mean(axis=0))
-        resids.append(i)
 
-    return np.array(resids), np.array(centroids)
+        if len(sel):
+            sidechains.append(
+                (
+                    residue.resid,
+                    sel,
+                    get_vdw_radii(sel),
+                )
+            )
+
+    return sidechains
 
 
-def compute_centroid_distance_matrix(centroids):
-    return distance_array(centroids, centroids)
+def compute_overlap_matrix(sidechains):
+    n = len(sidechains)
+
+    overlap_mat = np.zeros((n, n))
+
+    for i in range(n):
+        overlap_mat[i, i] = 0.0
+
+        _, atoms_i, radii_i = sidechains[i]
+
+        for j in range(i + 1, n):
+            _, atoms_j, radii_j = sidechains[j]
+
+            dists = distance_array(
+                atoms_i.positions,
+                atoms_j.positions,
+            )
+
+            # shape: (natoms_i, natoms_j)
+            vdw_sum = radii_i[:, np.newaxis] + radii_j[np.newaxis, :]
+
+            overlaps = vdw_sum - dists
+
+            # largest overlap between any atom pair
+            max_overlap = overlaps.max()
+
+            overlap_mat[i, j] = max_overlap
+            overlap_mat[j, i] = max_overlap
+
+    return overlap_mat
 
 
 def universe_setup(traj_file, top_file: Path, output_prefix: str = "centroids"):
@@ -66,20 +101,21 @@ def universe_setup(traj_file, top_file: Path, output_prefix: str = "centroids"):
     all_matrices = []
 
     for i, ts in enumerate(traj_uni.trajectory):
-        resids, centroids = compute_sidechain_centrorids(traj_uni, nres)
-        mat = compute_centroid_distance_matrix(centroids)
+        resids, sidechains = get_sidechains(traj_uni, nres)
+
+        mat = compute_overlap_matrix(sidechains)
+
         all_matrices.append(mat)
 
-        print(f"Progress: {i / len(traj_uni.trajectory) * 100:2f}%", end="\r")
+        print(f"Progress: {100 * i / n_frames:.1f}%", end="\r")
+
     print("\n")
     all_matrices_array = np.array(all_matrices)
     avg_matrix = np.mean(all_matrices_array, axis=0)
 
     if output_prefix:
-        np.save(f"{output_prefix}_dist_matrices.npy", all_matrices_array)
-        np.save(f"{output_prefix}_avg_matrices.npy", avg_matrix)
-        np.savetxt(f"{output_prefix}_avg_matrices.dat", avg_matrix, fmt="%.3f")
-        np.savetxt(f"{output_prefix}_resids.dat", resids, fmt="%.3f")
+        np.save(f"{output_prefix}_overlap_all_matrices.npy", all_matrices_array)
+        np.savetxt(f"{output_prefix}_overlap_resids.dat", resids, fmt="%.3f")
 
     print(f"[DONE] {traj_file} in {time() - start_time:.2f}\n")
 
