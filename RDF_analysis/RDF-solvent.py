@@ -52,7 +52,8 @@ def get_polymer_atoms(u, resid=None):
 
 
 def get_solvent_atoms(u):
-    sel = f"resname LIG and name {SOLVENT_SELECTION}"
+    # sel = f"resname LIG and name {SOLVENT_SELECTION}"
+    sel = f"resname SOL and name {SOLVENT_SELECTION}"
     print(sel)
     atoms = u.select_atoms(sel)
     return atoms, sel
@@ -67,6 +68,7 @@ def compute_rdf_per_site(traj_file, geom_tpr, named_pdb):
 
     nres = max(named_u.residues.resids) + 1
     print(nres)
+    print(u.residues)
 
     polymer_atoms, polymer_sel = get_polymer_atoms(named_u)
     solvent_atoms, solvent_sel = get_solvent_atoms(u)

@@ -5,6 +5,7 @@ import argparse
 import pandas as pd
 from matplotlib import cm
 from matplotlib.patches import Patch
+import matplotlib as mpl
 import re
 import os
 
@@ -113,14 +114,26 @@ def plot_stacked_bars(datasets, labels, title_template, output_file_template):
     print(dfs)
     print(dfs.sum())
 
-    matplotlib.rcParams.update({"font.size": 8})
+    # --- Font: Arial-like on Linux ---
+    mpl.rcParams["font.family"] = "sans-serif"
+    mpl.rcParams["font.sans-serif"] = ["Liberation Sans", "DejaVu Sans"]
+    mpl.rcParams["font.size"] = 7.5
+
+    # --- Line widths ---
+    mpl.rcParams["lines.linewidth"] = 1
+    mpl.rcParams["axes.linewidth"] = 0.5
+    mpl.rcParams["xtick.major.width"] = 0.5
+    mpl.rcParams["ytick.major.width"] = 0.5
+
+    cm_to_inch = 1 / 2.54
+    fig_size = 6 * cm_to_inch  # square
 
     # Now loop through the DataFrames and plot the stacked bar charts
-    fig, ax = plt.subplots(figsize=(6.3, 3.4))
+    fig, ax = plt.subplots(figsize=(fig_size, fig_size / 1.5))
 
     # Red gradient colormap
     cmap = cm.Reds  # You can change this to other colormaps if needed
-    norm = plt.Normalize(vmin=0, vmax=len(dfs))
+    norm = plt.Normalize(vmin=0, vmax=len(dfs) if len(dfs) < 11 else 10)
 
     # Plot the stacked bar chart
     bottom = np.zeros(len(labels))
@@ -163,7 +176,7 @@ def plot_stacked_bars(datasets, labels, title_template, output_file_template):
 
         # Calculate vertical position: center of the "Other" bar
         # y_pos = bottom[x] + value / 2
-        y_pos = 92
+        y_pos = 104  # was 92
 
         print(x, y_pos)
 
@@ -174,12 +187,15 @@ def plot_stacked_bars(datasets, labels, title_template, output_file_template):
             ha="center",
             va="center",
             fontsize=8,
-            color="white" if value > 5 else "black",  # adjust text color for visibility
+            color="white"
+            if y_pos < 100
+            else "black",  # adjust text color for visibility
             fontweight="bold",
         )
 
     # Set axis labels and title
-    plt.xticks(range(len(labels)), [name_map[l] for l in labels], rotation=45)
+    # plt.xticks(range(len(labels)), [name_map[l] for l in labels], rotation=45)
+    plt.xticks(range(len(labels)), [l for l in labels], rotation=45)
     ax.set_ylim([0, 100])
     ax.set_ylabel("Population [%]")
     # ax.set_title(f"{title_template}")
@@ -238,16 +254,23 @@ def main():
     # if args.labels and len(args.labels) != len(args.files):
     #     parser.error("Number of labels must match number of files")
 
-    args.files = sorted(args.files, key=sort_key)
+    # args.files = sorted(args.files, key=sort_key)
 
-    data_file = [
-        f"{f}/RMSD/{f}-size.xvg" for f in args.files
-    ]  # change analysis directory structure here.
+    data_file = []
+    data_file.extend(
+        [f"analysis/{f}/RMSD/{f}-size.xvg" for f in args.files]
+    )  # change analysis directory structure here.
+
+    data_file.extend(
+        [f"analysis-acn/{f}/RMSD/{f}-size.xvg" for f in args.files]
+    )  # change analysis directory structure here.
     print(data_file)
 
-    labels = (
-        args.files if args.files else [f"Data {i + 1}" for i in range(len(args.files))]
-    )
+    # labels = (
+    #     args.files if args.files else [f"Data {i + 1}" for i in range(len(args.files))]
+    # )
+    labels = [f"Data {i + 1}" for i in range(len(data_file))]
+    print(labels)
     datasets = [load_dataset(fp) for fp in data_file]
 
     plot_stacked_bars(

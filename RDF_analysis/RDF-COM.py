@@ -3,13 +3,14 @@ import MDAnalysis as mda
 import numpy as np
 import sys
 from pathlib import Path
-from MDAnalysis.analysis.rdf import InterRDF
-from MDAnalysis.analysis.hydrogenbonds import HydrogenBondAnalysis
+from MDAnalysis.lib.distances import distance_array
+from MDAnalysis.transformations import unwrap
 
 # ---- USER SETTINGS ----
 INPUT_DIR = Path(sys.argv[1])
 GEOM_TPR = Path(sys.argv[2])
 NAMED_PDB = Path(sys.argv[3])
+SOLVENT_FILE = Path(sys.argv[4])
 
 POLYMER_SELECTION = "CZ* CF* CI* CK"  # e.g. N, O, H*
 # POLYMER_SELECTION = sys.argv[3]  # e.g. N, O, H*
@@ -19,14 +20,13 @@ GLOB = "full.xtc"
 
 NBINS = 200
 RANGE = (0.0, 10.0)
-STEP = 100
+STEP = 50
 
 # -----------------------
 
 
 def get_polymer_atoms(u, resid):
     sel = f"resid {resid} and name {POLYMER_SELECTION}"
-    print(sel)
     atoms = u.select_atoms(sel)
     return atoms, sel
 
@@ -48,14 +48,19 @@ def compute_com_rdf_multi(
     total_pairs = 0  # for normalization
 
     for ts in u.trajectory[::step]:
-        print(f"PROGRESS: {ts} : {len(u.trajectory)}", end="\r")
+        print(ts.time, end="\r")
+        # for res in solvent_residues:
+        #     unwrap(res.atoms)
+        # unwrap(groupA)
+
         comA = groupA.center_of_mass()
 
         # compute COMs of all solvent molecules
         comB = np.array([res.atoms.center_of_mass() for res in solvent_residues])
 
         # distances from A to all solvent COMs
-        dists = np.linalg.norm(comB - comA, axis=1)
+        dists = distance_array(comA.reshape(1, 3), comB, box=ts.dimensions).flatten()
+        # print("min:", np.min(dists), "mean:", np.mean(dists))
 
         hist += np.histogram(dists, bins=edges)[0]
 
@@ -63,12 +68,9 @@ def compute_com_rdf_multi(
         n_frames += 1
 
     # bin centers
+    print("Done")
     r = 0.5 * (edges[:-1] + edges[1:])
     dr = edges[1] - edges[0]
-
-    # box volume (assumes constant box)
-    vol = u.dimensions[:3].prod()
-    density = total_pairs / (n_frames * vol)
 
     shell_vol = 4.0 * np.pi * r**2 * dr
 
@@ -87,6 +89,8 @@ def compute_rdf_per_site(traj_file, geom_tpr, named_pdb):
     nres = max(named_u.residues.resids) + 1
     print(nres)
 
+    u.trajectory.add_transformations(unwrap(u.atoms))
+
     solvent_atoms, solvent_sel = get_solvent_atoms(u)
 
     solvent_residues = solvent_atoms.residues
@@ -102,16 +106,20 @@ def compute_rdf_per_site(traj_file, geom_tpr, named_pdb):
             print("[ERROR] Empty selection")
             return None
 
-        label = f"{named_u.residues[resid].resname}-{resid}:COM"
+        label = f"{polymer_atoms.resnames[resid]}-{resid}:COM"
         print(f"Computing COM RDF for {label}")
 
         groupA = u.atoms[polymer_atoms.indices]
-        # print(polymer_atoms.indices)
-        # for i, _ in enumerate(polymer_atoms):
-        #     print(groupA.atoms[i], " - ", polymer_atoms.atoms[i])
+        print(groupA)
+        print(solvent_residues)
 
         r, rdf = compute_com_rdf_multi(
-            groupA, solvent_residues, u, nbins=NBINS, r_range=RANGE, step=STEP
+            groupA,
+            solvent_residues,
+            u,
+            nbins=NBINS,
+            r_range=RANGE,
+            step=STEP,
         )
 
         if bins is None:
@@ -130,6 +138,21 @@ if __name__ == "__main__":
     if not files:
         print("No trajectory files found")
         sys.exit(1)
+
+    # --- compute density from structure ---
+    ref = mda.Universe(SOLVENT_FILE)
+
+    solvent_sel = "resname LIG"
+    solvent_atoms = ref.select_atoms(solvent_sel)
+    solvent_residues = solvent_atoms.residues
+
+    N = len(solvent_residues)
+
+    box = ref.dimensions[:3]
+    V = box[0] * box[1] * box[2]
+
+    density = N / V  # molecules / A^3
+    # ---
 
     all_results = {}
 
@@ -153,14 +176,8 @@ if __name__ == "__main__":
     # --- save ---
     np.save("rdf_bins.npy", bins)
 
-    safe_selection = (
-        POLYMER_SELECTION.replace(":", "_")
-        .replace("-", "_")
-        .replace(" ", "_")
-        .replace("*", "star")
-    )
-    for key, rdf in avg_results.items():
+    for i, (key, rdf) in enumerate(avg_results.items()):
         safe_key = key.replace(":", "_").replace("-", "_")
-        np.save(f"rdf_COM{safe_selection}_SOLVCOM_{safe_key}.npy", rdf)
+        np.save(f"rdf_POLYCOM_SOLVCOM_{i}.npy", rdf)
 
     print("[DONE] Per-site RDFs computed and saved.")

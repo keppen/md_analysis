@@ -7,7 +7,7 @@ import numpy as np
 from ploting import plot_kde_3d
 
 
-def compute_torsion_dataframe(universe, nres, atom_selector_fn, verbose=True, stop=-1):
+def compute_torsion_dataframe(universe, nres, atom_selector_fn, verbose=False, stop=-1):
     """
     Build a list of AtomGroups of four atoms per residue via atom_selector_fn,
     run the Dihedral analysis, and return a DataFrame of angles.
@@ -17,7 +17,7 @@ def compute_torsion_dataframe(universe, nres, atom_selector_fn, verbose=True, st
     ref_universe : MDAnalysis.Universe
         The Universe whose trajectory has already been patched.
     nres : int
-        Number of residues (max resid + 1).
+        Number of residues (max resid).
     atom_selector_fn : callable
         Function taking (ref_universe, i, nres) and returning
         a list of four AtomGroup selections.
@@ -30,18 +30,21 @@ def compute_torsion_dataframe(universe, nres, atom_selector_fn, verbose=True, st
         Flattened angles shape (n_frames * nres, 1) as column "angle".
     """
     dihedral_groups = []
+    # Last mer is ommited
     for i in range(nres):
         sel = atom_selector_fn(universe, i, nres)
-        print(f"INFO: Current selection {atom_selector_fn}")
         if not all(len(group) == 1 for group in sel):
             counts = [len(g) for g in sel]
             raise ValueError(f"Could not find all 4 atoms for angle {i}: {counts}")
+        if len(sel) == 0:
+            print(f"CHI torsion of residue {i} skipped")
+            continue
         # flatten to one AtomGroup of four atoms
         dihedral_groups.append(sel[0] + sel[1] + sel[2] + sel[3])
 
     dih = Dihedral(dihedral_groups)
     dih.run(verbose=verbose, stop=stop)
-    print(dih.results.angles)
+    # print(dih.results.angles)
     return dih.results.angles
 
 
@@ -94,20 +97,10 @@ if __name__ == "__main__":
     npy_file = traj_file.stem + ".3dkde.data.npy"
 
     # Load reference (correct names) and trajectory (coordinates)
-    # ref = mda.Universe(ref_file)
     traj = mda.Universe(ref_file, traj_file)
-    print(traj.trajectory)
-
-    # Validate matching atom counts
-    # if len(ref.atoms) != len(traj.atoms):
-    #     raise ValueError("Atom counts don't match")
-
-    # Patch the trajectory into the reference Universe
-    # ref.trajectory = traj.trajectory
 
     # Number of residues
-    nres = max(r.resid for r in traj.residues) + 1
-    print("nres = ", nres)
+    nres = max(r.resid for r in traj.residues) + 1  # Last monomer ommited
 
     # Define selector functions for each torsion type
     def selector_torsion1(uni, i, nres):
@@ -140,7 +133,8 @@ if __name__ == "__main__":
         """CHI angle"""
         # last residue has HO instead of next N
         if i == nres - 1:
-            next_atom = uni.select_atoms(f"resid {i} and name HO")
+            # next_atom = uni.select_atoms(f"resid {i} and name HO")
+            return []
         else:
             next_atom = uni.select_atoms(f"resid {i} and name C")
         return [
@@ -158,16 +152,27 @@ if __name__ == "__main__":
     torsion3 = compute_torsion_dataframe(traj, nres, selector_torsion3, stop=stop)
 
     data = np.concatenate([torsion1, torsion2, torsion3], axis=1)
-    print(data)
-    print(data.shape)
+
+    print()
+    print(
+        " ".join([f"PHI{i}" for i in range(nres)]),
+        " ".join([f"XI{i}" for i in range(nres)]),
+        " ".join([f"CHI{i}" for i in range(nres)]),
+    )
+    print(f"Mean {traj_file.stem}", " ".join([f"{x:6.2f}" for x in data.mean(axis=0)]))
+    print(f"STD {traj_file.stem}", " ".join([f"{x:6.2f}" for x in data.std(axis=0)]))
+    print()
+
     np.save(npy_file, data)
+
     # Concatenate and inspect
     data = np.concatenate(
         [[torsion1.ravel(), torsion2.ravel(), torsion3.ravel()]], axis=1
     ).T
-    print(data)
-    print(data.shape)
-    print("WARNING!  KDE calculataion is done! Remove breaking point")
+
+    # data.mean()
+    exit()
+    print("WARNING!  KDE is not done! Remove breaking point")
 
     grid_limits = [(-180, 180), (-180, 180), (-180, 180)]
     resolution = 90

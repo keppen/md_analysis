@@ -1,5 +1,6 @@
 from time import time
 import MDAnalysis as mda
+from MDAnalysis.topology.tables import vdwradii as vdw_radii
 from MDAnalysis.lib.distances import distance_array
 from numpy.typing import ArrayLike
 from pandas import DataFrame
@@ -14,12 +15,14 @@ import csv
 
 INPUT_DIR = Path(sys.argv[1])
 NAMED_PDB = Path(sys.argv[2])
-GLOB = "*.xtc"
+# RESID = int(sys.argv[3])
+# GLOB = "*.xtc"
+GLOB = "pca-ensemble-min3.pdb"
 PROBE_RADIUS_A = 1.4  # Angstrem
 
 # -----------------------
 
-PROBE_RADIUS_NM = PROBE_RADIUS_A / 10  # nm
+PROBE_RADIUS_NM = PROBE_RADIUS_A / 10  # to nm
 
 
 def generate_sphere_points(n_points: int = 960):
@@ -127,7 +130,7 @@ def universe_setup(
     start_time = time()
     print(f"[START] Loading {traj_file}")
 
-    vdw_radii = {"H": 1.0, "C": 1.7, "N": 1.45, "O": 1.35, "S": 1.8}
+    # vdw_radii = {"H": 1.0, "C": 1.7, "N": 1.45, "O": 1.35, "S": 1.8}
 
     traj_uni = mda.Universe(top_file, traj_file)
     nres: int = max(r.resid for r in traj_uni.residues) + 1
@@ -136,7 +139,16 @@ def universe_setup(
     sel_fragment: mda.AtomGroup = (
         traj_uni.select_atoms(selection) if selection else sel_total
     )
+
+    # CALCULATE SINGLE MER - NO BACKBONE EFFECT
+    # sel_total: mda.AtomGroup = traj_uni.select_atoms(f"resid {RESID}")
+    # sel_fragment: mda.AtomGroup = (
+    #     sel_total.select_atoms(selection) if selection else sel_total
+    # )
     print(f"Selection: {str(selection)}")
+    print(sel_total)
+    print()
+    print(sel_fragment)
 
     elements_total: list[str] = [
         a.element if a.element else a.name[0] for a in sel_total
@@ -159,7 +171,7 @@ def universe_setup(
     sasa_values = []
     n_frames = len(traj_uni.trajectory)
     print(f"Processing {n_frames} frames.")
-    for i, ts in enumerate(traj_uni.trajectory[::50]):
+    for i, ts in enumerate(traj_uni.trajectory[::2]):
         coords_total = sel_total.atoms.positions.copy()
         coords_fragment = sel_fragment.atoms.positions.copy()
 
@@ -201,11 +213,16 @@ if __name__ == "__main__":
 
     print(f"Found {len(files)} files to process.")
 
-    # sasa_traj = universe_setup(files, NAMED_PDB, selection="name N C O OA HN")
+    # sasa_traj = universe_setup(
+    #     files, NAMED_PDB, selection="name N C O OA HN OH HO OAT OT"
+    # )
     # DataFrame(sasa_traj).to_csv("sasa_urethane.csv")
     # sasa_traj = universe_setup(files, NAMED_PDB)
     # DataFrame(sasa_traj).to_csv("sasa_total.csv")
-    sasa_traj = universe_setup(
-        files, NAMED_PDB, selection="name CZ* CF* CI* CK HZ* HF* HI* HK* "
-    )
-    DataFrame(sasa_traj).to_csv("sasa_aromatic.csv")
+    # sasa_traj = universe_setup(
+    #     files, NAMED_PDB, selection="name CZ* CF* CI* CK HZ* HF* HI* HK* "
+    # )
+    # DataFrame(sasa_traj).to_csv("sasa_aromatic.csv")
+
+    sasa_traj = universe_setup(files, NAMED_PDB, selection="name HN")
+    DataFrame(sasa_traj).to_csv("sasa_HN.csv")

@@ -11,6 +11,8 @@ POLY_ATOM = sys.argv[3]
 SOLV_ATOM = sys.argv[4]
 OUTPUT = SUFFIX + "_rdf_plot.png"
 MAX_CURVES = 20  # avoid clutter
+
+
 # ------------------
 
 blue_colors = [
@@ -105,7 +107,11 @@ def main():
     # rdf_files.extend(sorted(DATA_DIR.glob(f"rdf_{SUFFIX}*SOLVENT_C_*OT.npy")))
     # rdf_files.extend(sorted(DATA_DIR.glob(f"rdf_{SUFFIX}*SOLVENT_C_*O.npy")))
 
-    print(f"rdf_{SUFFIX}*SOLVENT_{SOLV_ATOM}_*_{POLY_ATOM}*.npy")
+    # rdf_files.extend(sorted(DATA_DIR.glob(f"rdf_POLYCOM*.npy")))
+
+    ### SELECTION RULES SINGLE SITES.
+
+    # print(f"rdf_{SUFFIX}*SOLVENT_{SOLV_ATOM}_*_{POLY_ATOM}*.npy")
 
     rdf_files.extend(
         sorted(DATA_DIR.glob(f"rdf_{SUFFIX}*SOLVENT_{SOLV_ATOM}_*_{POLY_ATOM}*.npy"))
@@ -138,21 +144,22 @@ def main():
     for i, f in enumerate(rdf_files):
         rdf = np.load(f)
         label = extract_label(f)
-        print(label.split(":")[0].split(" ")[1])
+        # print(label.split(":")[0].split(" ")[1])
+        print(label)
 
-        if "O" in label.split(":")[0].split(" ")[1]:
-            if "A" in label.split(":")[0].split(" ")[1]:
-                color = blue_colors[i % 10]
-            else:
-                color = red_colors[i % 10]
-        elif "N" in label.split(":")[0].split("-")[1]:
-            color = blue_colors[i % 10]
-        elif "H" in label.split(":")[0].split("-")[1]:
-            color = grey_colors[i % 10]
-        elif "COM" in label.split(":")[-1]:
-            color = grey_colors[i % 10]
-        else:
-            color = grey_colors[i % 10]
+        # if "O" in label.split(":")[0].split(" ")[1]:
+        #     if "A" in label.split(":")[0].split(" ")[1]:
+        #         color = blue_colors[i % 10]
+        #     else:
+        #         color = red_colors[i % 10]
+        # elif "N" in label.split(":")[0].split("-")[1]:
+        #     color = blue_colors[i % 10]
+        # elif "H" in label.split(":")[0].split("-")[1]:
+        #     color = grey_colors[i % 10]
+        # elif "COM" in label.split(":")[-1]:
+        #     color = grey_colors[i % 10]
+        # else:
+        #     color = grey_colors[i % 10]
 
         color = new_colors[i % 10]
         if i < MAX_CURVES:

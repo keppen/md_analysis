@@ -11,7 +11,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 INPUT_DIR = Path(sys.argv[1])
 NAMED_PDB = Path(sys.argv[2])
 TOPOLOGY_ITP = Path(sys.argv[3])
-GLOB = "0-classic-*.xtc"
+GLOB = "iso.xtc"
 D_A_CUTOFF = 3.5
 D_H_A_ANGLE = 155
 N_WORKERS = 1
@@ -27,7 +27,8 @@ def compute_hbonds(config, chunk):
     acceptors_sel = config["acceptors_sel"]
 
     traj_uni = mda.Universe(name_file, traj_file)
-    top_uni = mda.Universe(top_file, topology_format="ITP")
+    # top_uni = mda.Universe(top_file, topology_format="ITP")
+    top_uni = mda.Universe(top_file)
 
     traj_uni.add_TopologyAttr("charges", top_uni.residues[0].atoms.charges)
 

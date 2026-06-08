@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from typing import Optional, Sequence
+import matplotlib as mpl
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
@@ -52,6 +53,7 @@ name_map_chcl3 = {
     "boc-pssrr4": "Boc-Pc4 (SS-RR-SS-RR)",
 }
 name_map_acn = {
+    "boc-ds4": "Boc-D4 (SSSS), ACN",
     "boc-pgs4": "Boc-Pg4 (SSSS), ACN",
     "boc-pgsssr": "Boc-Pg4 (SSSR), ACN",
     "boc-pgsrss": "Boc-Pg4 (SRSS), ACN",
@@ -109,6 +111,16 @@ def plot_heatmap(
     show_colorbar : bool
         Whether to include a colorbar.
     """
+    # --- Font: Arial-like on Linux ---
+    mpl.rcParams["font.family"] = "sans-serif"
+    mpl.rcParams["font.sans-serif"] = ["Liberation Sans", "DejaVu Sans"]
+    mpl.rcParams["font.size"] = 7.5
+
+    # --- Line widths ---
+    mpl.rcParams["lines.linewidth"] = 1
+    mpl.rcParams["axes.linewidth"] = 0.5
+    mpl.rcParams["xtick.major.width"] = 0.5
+    mpl.rcParams["ytick.major.width"] = 0.5
 
     matrix = np.asarray(matrix)
     if matrix.ndim != 2:
